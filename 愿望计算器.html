@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>+++2024愿望+++</title>
+    <!-- CSS only -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+    />
+    <style>
+      h1,
+      h2 {
+        text-align: center;
+        font-size: 44px;
+        font-family: STHupo;
+        background-image: linear-gradient(to right, white, blue);
+        color: transparent;
+        -webkit-background-clip: text;
+        margin-top: 30px;
+      }
+      h2 {
+        font-family: 'Gill Sans';
+        background-image: linear-gradient(to right, rgb(207, 199, 199), rgb(197, 50, 50));
+        font-size: 24px;
+        margin: 0 0 5px 0;
+      }
+      .red {
+        color: red !important;
+      }
+      .search {
+        width: 300px;
+        margin: 20px 0;
+      }
+      .my-form {
+        display: flex;
+        margin: 20px 0;
+      }
+      .my-form input {
+        flex: 1;
+        margin-right: 20px;
+      }
+      .table > :not(:first-child) {
+        border-top: none;
+      }
+      .contain {
+        display: flex;
+        padding: 10px;
+      }
+      .list-box {
+        flex: 1;
+        padding: 0 30px;
+      }
+      .list-box a {
+        text-decoration: none;
+      }
+      .echarts-box {
+        width: 600px;
+        height: 400px;
+        padding: 30px;
+        margin: 0 auto;
+        border: 1px solid #ccc;
+      }
+      tfoot,
+      .statistics {
+        font-weight: bold;
+      }
+      @media screen and (max-width: 1000px) {
+        .contain {
+          flex-wrap: wrap;
+        }
+        .list-box {
+          width: 100%;
+        }
+        .echarts-box {
+          margin-top: 30px;
+        }
+      }
+      select {
+        margin-right: 20px;
+        padding: 5px;
+        color: dimgray;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .box2 {
+        margin-top: 5px;
+      }
+      .chartArea {
+        display: flex;
+        margin-top: 15px;
+        flex-direction: column;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1>2024-hourenの 愿望管理器</h1>
+      <h2>——"Only love can overflow black holes"</h2>
+      <div class="contain">
+        <div class="list-box">
+          <form class="my-form">
+            <input
+              v-model.trim="hopeName"
+              type="text"
+              class="form-control"
+              placeholder="愿望内容"
+              name="2023"
+            />
+
+            <select
+              name="hopeType"
+              id="hopeType"
+              v-model="hopeType"
+            >
+              <option value="生活">生活</option>
+              <option value="娱乐">娱乐</option>
+              <option value="学习">学习</option>
+              <option value="工作">工作</option>
+            </select>
+
+            <input
+              v-model.number="hopePower"
+              type="text"
+              class="form-control"
+              placeholder="愿力指数"
+              name="2024"
+            />
+            <button
+              type="button"
+              @click="add"
+              class="btn btn-primary"
+            >
+              添加愿望
+            </button>
+          </form>
+
+          <table class="table table-hover">
+            <thead>
+              <tr class="statistics">
+                <td colspan="1">总计： {{hopeList.length}} 个愿望</td>
+                <td colspan="3">平均愿力： {{powerAvg.toFixed(2)}}</td>
+              </tr>
+              <tr>
+                <th>编号</th>
+                <th>愿望内容</th>
+                <th>愿望类别</th>
+                <th>愿力指数</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(item, index) in hopeList"
+                :key="index"
+              >
+                <td>{{index + 1}}</td>
+                <td>{{item.name}}</td>
+                <td>{{item.type}}</td>
+                <td :class="{red:item.power < 50}">{{item.power.toFixed(2)}}</td>
+                <td>
+                  <a
+                    href="javascript:;"
+                    @click="del(item.id)"
+                    >删除</a
+                  >
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="1">总计： {{hopeList.length}} 个愿望</td>
+                <td colspan="3">平均愿力： {{powerAvg.toFixed(2)}}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="chartArea">
+          <div
+            class="echarts-box"
+            id="main"
+          ></div>
+          <div
+            class="echarts-box box2"
+            ref="barBox"
+          ></div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.0/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+      const app = new Vue({
+        el: '#app',
+        data: {
+          hopeList: JSON.parse(localStorage.getItem('hopeList')) || [{ id: 1, name: '写一个愿望管理器', type: '学习', power: 100 }],
+          hopeName: '',
+          hopePower: '',
+          hopeType: '学习'
+        },
+        computed: {
+          powerAvg() {
+            return (
+              this.hopeList.reduce((sum, item) => {
+                return sum + item.power
+              }, 0) / this.hopeList.length
+            )
+          }
+        },
+
+        mounted() {
+          this.pieChart = echarts.init(document.querySelector('#main'))
+          this.pieChart.setOption({
+            title: {
+              text: '愿力分类指数',
+              left: 'center'
+            },
+            tooltip: {
+              trigger: 'item'
+            },
+            legend: {
+              orient: 'vertical',
+              left: 'left'
+            },
+            series: [
+              {
+                name: '愿力指数',
+                type: 'pie',
+                radius: '50%',
+                label: {
+                  show: true,
+                  formatter(param) {
+                    // correct the percentage
+                    return param.name + ' (' + param.percent + '%)'
+                  }
+                },
+                data: [],
+                emphasis: {
+                  itemStyle: {
+                    shadowBlur: 10,
+                    shadowOffsetX: 0,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                  }
+                }
+              }
+            ]
+          })
+          // ----------------------------------------------------
+          this.barChart = echarts.init(document.querySelector('.box2'))
+          this.barChart.setOption({
+            title: {
+              text: '愿力指数',
+              subtext: 'hope-power'
+            },
+            tooltip: {
+              trigger: 'axis',
+              axisPointer: {
+                type: 'shadow'
+              }
+            },
+            dataset: [
+              {
+                dimensions: ['id', 'name', 'power', 'type'],
+                source: []
+              },
+              {
+                transform: {
+                  type: 'sort',
+                  config: { dimension: 'power', order: 'desc' }
+                }
+              }
+            ],
+            xAxis: {
+              type: 'category',
+              show: false,
+              axisLabel: { interval: 0, rotate: 30 }
+            },
+            yAxis: {},
+            series: {
+              type: 'bar',
+              color: 'skyblue',
+              encode: { x: 'name', y: 'power' },
+              datasetIndex: 1
+            }
+          })
+          this.renderChart()
+        },
+
+        methods: {
+          add() {
+            if (!this.hopeName) {
+              alert('请输入愿望内容！')
+              return
+            }
+            if (typeof this.hopePower !== 'number') {
+              alert('请输入愿力指数')
+              return
+            }
+            this.hopeList.unshift({
+              id: +new Date(),
+              name: this.hopeName,
+              power: this.hopePower,
+              type: this.hopeType
+            })
+            this.renderChart()
+            this.hopeName = ''
+            this.hopePower = ''
+            this.hopeType = '生活'
+          },
+          del(id) {
+            this.hopeList = this.hopeList.filter(item => item.id !== id)
+            this.renderChart()
+          },
+          renderChart() {
+            let lifePower = 0
+            let funPower = 0
+            let learnPower = 0
+            let workPower = 0
+            for (let i = 0; i < this.hopeList.length; i++) {
+              const item = this.hopeList[i]
+              if (item.type === '生活') {
+                lifePower += item.power
+              }
+              if (item.type === '娱乐') {
+                funPower += item.power
+              }
+              if (item.type === '学习') {
+                learnPower += item.power
+              }
+              if (item.type === '工作') {
+                workPower += item.power
+              }
+            }
+            const re = [
+              { value: lifePower, name: '生活' },
+              { value: funPower, name: '娱乐' },
+              { value: learnPower, name: '学习' },
+              { value: workPower, name: '工作' }
+            ]
+            this.pieChart.setOption({
+              series: [{ data: re }]
+            })
+            const arr = []
+            for (let i = 0; i < this.hopeList.length; i++) {
+              const item = this.hopeList[i]
+              const ar = Object.values(item)
+              arr.unshift(ar)
+            }
+            console.log(arr)
+            this.barChart.setOption({
+              dataset: [{ source: arr }]
+            })
+          }
+        },
+        watch: {
+          hopeList: {
+            deep: true,
+            immediate: true,
+            handler(newValue) {
+              localStorage.setItem('hopeList', JSON.stringify(newValue))
+            }
+          }
+        }
+      })
+    </script>
+  </body>
+</html>
